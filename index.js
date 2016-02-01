@@ -28,6 +28,10 @@ BoardData.prototype.addCard = function(card) {
   this._cards.push(card);
 };
 
+BoardData.prototype.cards = function() {
+  return this._cards;
+};
+
 var CardData = function(cardId, cardName) {
   this._cardId = cardId;
   this._cardName = cardName;
@@ -51,17 +55,18 @@ function getListsForBoard(boardId) {
 }
 
 function getAllCardsForList(listId) {
-    var cards = trello.getCardsForList(listId, "createCard,updateCard:closed,updateCard:idList,deleteCard");
+  var cards = trello.getCardsForList(listId, "createCard,updateCard:closed,updateCard:idList,deleteCard");
+
+  return cards;
+}
+
+function saveCardsForProcessing(cards) {
   _.forEach(cards, (card) => { capacityPlanningBoard.addCard(card); });
   return cards;
 }
 
 function removeHeaderCards(cards) {
     return _.reject(cards, (card) => { return card.name.indexOf("#header") > -1; });
-}
-
-function getAllActions(blackboard) {
-    return trello.getActionsForList(blackboard.list, null);
 }
 
 function startingTimestamp(actions) { return actions[0].date; }
@@ -105,9 +110,10 @@ function processCards(lookbackPeriods, cards) {
 
 trello.getBoards(memberId)
     .then((boards) => { return findCorrectBoard(boards, "Capacity Planning"); })
-    .then((capacityPlanningBoard) => { return getListsForBoard(capacityPlanningBoard.id); })
+    .then((board) => { return getListsForBoard(board.id); })
     .then((lists) => { return findCompleteList(lists); })
     .then((completeList) => { return getAllCardsForList(completeList.id); })
     .then((allCompletedCards) => { return removeHeaderCards(allCompletedCards); })
+    .then((cards) => { return saveCardsForProcessing(cards); })
     .then((cards) => { processCards([30], cards); })
     .then(null, (error) => { console.log("error:" + error); });
