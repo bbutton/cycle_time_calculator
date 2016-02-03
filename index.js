@@ -5,7 +5,13 @@ var _ = require("lodash");
 var moment = require("moment");
 
 var memberId = "me";
-var trello = new Trello("055e3f1d72f6c94bc38c02276978f71f", "edf7869844f0f8429d39d5c23e0c05998f5d5d0e9f0c6a26e07a2f2885ebd092");
+var trelloId = process.env.TRELLO_ID;
+var trelloToken = process.env.TRELLO_TOKEN;
+
+console.log("TRELLO_ID is " + trelloId);
+console.log("TRELLO_TOKEN is " + trelloToken);
+
+var trello = new Trello(trelloId, trelloToken);
 
 var capacityPlanningBoard = null;
 
@@ -106,6 +112,8 @@ function processCards(lookbackPeriods, cards) {
     console.log("Total completed cards: " + cards.length);
 
     dumpCards(cards);
+
+  _.each(cards, (card) => { console.log( elapsedTime(card.actions) + " days - " + card.name); });
 }
 
 trello.getBoards(memberId)
