@@ -68,17 +68,41 @@ function endTimestamp(actions) {
 //   return endDate.diff(startDate, 'days');
 // }
 
+function getEstimate(card) {
+
+  var estimate = 9999;
+  _.each(card.labels, (label) => { 
+    var regex = /^([0-9])[ ]*-/;
+    var result = label.name.match(regex);
+    if(result != null) {
+      estimate = result[1];
+    }
+  });
+
+  return estimate;
+}
+
 function processCards(cards) {
+
+  var errorLog = [];
 
     console.log("Total cards: " + cards.length);
 
+  console.log("cycle time\testimate\tcard name");
      _.each(cards, (card) => { 
         if (lastWorkingAction(card.actions) === undefined || lastCompleteAction(card.actions) === undefined) {
           return;
         }
-        var cycleTime = elapsedTime(startingTimestamp(card.actions), endTimestamp(card.actions));
-        console.log(cycleTime + " days - " + card.name);
+       var cycleTime = elapsedTime(startingTimestamp(card.actions), endTimestamp(card.actions));
+       var estimate = getEstimate(card);
+       if(estimate != 9999) {
+         console.log(cycleTime + "," + estimate + ",\"" + card.name + "\"");
+       } else {
+         errorLog.push(cycleTime + " days, estimate: " + estimate + " - \"" + card.name + "\"");
+       }
      });
+
+  _.each(errorLog, (error) => { console.error(error); });
 }
 
 trello.getBoards(memberId)
