@@ -89,7 +89,9 @@ function processCards(cards) {
     console.log("Total cards: " + cards.length);
 
   console.log("cycle time\testimate\tcard name");
-     _.each(cards, (card) => { 
+  var histogram = new Object();
+
+    _.each(cards, (card) => { 
         if (lastWorkingAction(card.actions) === undefined || lastCompleteAction(card.actions) === undefined) {
           return;
         }
@@ -100,7 +102,19 @@ function processCards(cards) {
        } else {
          errorLog.push(cycleTime + " days, estimate: " + estimate + " - \"" + card.name + "\"");
        }
-     });
+
+      if (! histogram[estimate])
+        histogram[estimate] = new Array();
+
+      if ( histogram[estimate][cycleTime] )
+        histogram[estimate][cycleTime] += 1;
+      else
+        histogram[estimate][cycleTime] = 1;
+    });
+
+  _.each(histogram, (value, key) => {
+    console.log(key + "," + value);
+  });
 
   _.each(errorLog, (error) => { console.error(error); });
 }
