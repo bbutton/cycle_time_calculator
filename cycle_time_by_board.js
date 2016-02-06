@@ -44,11 +44,11 @@ function getAllCardsForBoard(board) {
 }
 
 function lastWorkingAction(actions) {
-  return _.findLast(actions, (action) => {return action.data.listAfter && action.data.listAfter.name == 'Working' });
+  return _.findLast(actions, (action) => {return action.data.listAfter && action.data.listAfter.name == 'Working'; });
 }
 
 function lastCompleteAction(actions) {
-  return _.findLast(actions, (action) => {return action.data.listAfter && action.data.listAfter.name == 'Complete' });
+  return _.findLast(actions, (action) => {return action.data.listAfter && action.data.listAfter.name == 'Complete'; });
 }
 
 function startingTimestamp(actions) {
