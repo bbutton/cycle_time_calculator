@@ -1,0 +1,4 @@
+export TRELLO_ID=ffffffffffffffffffffffffffffffff
+export TRELLO_TOKEN=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+export TRELLO_BOARD='Feature Team: Advanced Storage'
+export TRELLO_DAYS_BACK=90
