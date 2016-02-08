@@ -8,10 +8,10 @@ var elapsedTime = require("./elapsedTime").elapsedTime;
 
 var memberId = "me";
 
-console.log("TRELLO_ID is " + process.env.TRELLO_ID);
-console.log("TRELLO_TOKEN is " + process.env.TRELLO_TOKEN);
-console.log("TRELLO_BOARD is " + process.env.TRELLO_BOARD);
-console.log("TRELLO_DAYS_BACK is " + process.env.TRELLO_DAYS_BACK );
+console.error("TRELLO_ID is " + process.env.TRELLO_ID);
+console.error("TRELLO_TOKEN is " + process.env.TRELLO_TOKEN);
+console.error("TRELLO_BOARD is " + process.env.TRELLO_BOARD);
+console.error("TRELLO_DAYS_BACK is " + process.env.TRELLO_DAYS_BACK );
 
 var trello = new Trello(process.env.TRELLO_ID, process.env.TRELLO_TOKEN);
 
@@ -77,9 +77,9 @@ function processCards(cards, days_back) {
 
   var errorLog = [];
 
-  console.log("Total cards: " + cards.length);
+  console.error("Total cards: " + cards.length);
 
-  console.log("cycle time\testimate\tcard name");
+  console.log("\"Cycle Time\",\"Estimate\",\"Card Name\"");
   var histogram = new Object();
 
     _.each(cards, (card) => { 
@@ -117,12 +117,14 @@ function processCards(cards, days_back) {
 
     });
 
+    console.log( "\n\"Estimate\",\"Occurences by Day\"" );
     _.each(histogram, (value, key) => {
       console.log(key + "," + value);
     });
 
+    console.log( "\n\"Estimate\",\"Average Days\"" );
     _.each(histogram, (value, key) => {
-      console.log("Average for estimate " + key + ": " + histogram[key]["total"] / histogram[key]["count"] );
+      console.log(key + "," + histogram[key]["total"] / histogram[key]["count"] );
     });
 
   _.each(errorLog, (error) => { console.error(error); });
