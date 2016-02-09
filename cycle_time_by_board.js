@@ -3,19 +3,17 @@
 var Trello = require("trello");
 var _ = require("lodash");
 var moment = require("moment");
+var rest = require('restler');
 var elapsedTime = require("./elapsedTime").elapsedTime;
 
 var memberId = "me";
-var trelloId = process.env.TRELLO_ID;
-var trelloToken = process.env.TRELLO_TOKEN;
-var boardName = process.env.TRELLO_BOARD;
 
-console.log("TRELLO_ID is " + trelloId);
-console.log("TRELLO_TOKEN is " + trelloToken);
-console.log("TRELLO_BOARD is " + boardName);
+console.error("TRELLO_ID is " + process.env.TRELLO_ID);
+console.error("TRELLO_TOKEN is " + process.env.TRELLO_TOKEN);
+console.error("TRELLO_BOARD is " + process.env.TRELLO_BOARD);
+console.error("TRELLO_DAYS_BACK is " + process.env.TRELLO_DAYS_BACK );
 
-var trello = new Trello(trelloId, trelloToken);
-var rest = require('restler');
+var trello = new Trello(process.env.TRELLO_ID, process.env.TRELLO_TOKEN);
 
 function makeRequest(fn, uri, options) {
         return new Promise(function(resolve, reject) {
@@ -61,16 +59,9 @@ function endTimestamp(actions) {
   return card.date;
 }
 
-// function getElapsedTime(startTime, endTime) {
-//   var startDate = moment(startTime);
-//   var endDate = moment(endTime);
-
-//   return endDate.diff(startDate, 'days');
-// }
-
 function getEstimate(card) {
 
-  var estimate = 9999;
+  var estimate = undefined;
   _.each(card.labels, (label) => { 
     var regex = /^([0-9])[ ]*-/;
     var result = label.name.match(regex);
@@ -82,45 +73,65 @@ function getEstimate(card) {
   return estimate;
 }
 
-function processCards(cards) {
+function processCards(cards, days_back) {
 
   var errorLog = [];
 
-    console.log("Total cards: " + cards.length);
+  console.error("Total cards: " + cards.length);
 
-  console.log("cycle time\testimate\tcard name");
+  console.log("\"Cycle Time\",\"Estimate\",\"Card Name\"");
   var histogram = new Object();
 
     _.each(cards, (card) => { 
-        if (lastWorkingAction(card.actions) === undefined || lastCompleteAction(card.actions) === undefined) {
-          return;
-        }
+       if (lastWorkingAction(card.actions) === undefined || lastCompleteAction(card.actions) === undefined) {
+         console.error( "Skipping unfinished card " + card.name + ", " + card.shortUrl );
+         return;
+       }
+       if ( moment().subtract(days_back, 'days').isAfter(startingTimestamp(card.actions) ) ) {
+         console.error( "Skipping old card " + card.name + ", " + card.shortUrl );
+         return;
+       }
+
        var cycleTime = elapsedTime(startingTimestamp(card.actions), endTimestamp(card.actions));
        var estimate = getEstimate(card);
+
        if(estimate != 9999) {
          console.log(cycleTime + "," + estimate + ",\"" + card.name + "\"");
        } else {
          errorLog.push(cycleTime + " days, estimate: " + estimate + " - \"" + card.name + "\"");
        }
 
-      if (! histogram[estimate])
+      if (! histogram[estimate]) {
         histogram[estimate] = new Array();
+        histogram[estimate]["count"] = 0;
+        histogram[estimate]["total"] = 0;
+      }
 
       if ( histogram[estimate][cycleTime] )
         histogram[estimate][cycleTime] += 1;
       else
         histogram[estimate][cycleTime] = 1;
+
+      histogram[estimate]["total"] += cycleTime;
+      histogram[estimate]["count"] += 1;
+
     });
 
-  _.each(histogram, (value, key) => {
-    console.log(key + "," + value);
-  });
+    console.log( "\n\"Estimate\",\"Occurences by Day\"" );
+    _.each(histogram, (value, key) => {
+      console.log(key + "," + value);
+    });
+
+    console.log( "\n\"Estimate\",\"Average Days\"" );
+    _.each(histogram, (value, key) => {
+      console.log(key + "," + histogram[key]["total"] / histogram[key]["count"] );
+    });
 
   _.each(errorLog, (error) => { console.error(error); });
 }
 
 trello.getBoards(memberId)
-    .then((boards) => { return findCorrectBoard(boards, boardName); })
+    .then((boards) => { return findCorrectBoard(boards, process.env.TRELLO_BOARD); })
     .then((board) => { return getAllCardsForBoard(board); })
-    .then((cards) => { processCards(cards); })
+    .then((cards) => { processCards(cards, process.env.TRELLO_DAYS_BACK); })
     .then(null, (error) => { console.log("error:" + error); });
