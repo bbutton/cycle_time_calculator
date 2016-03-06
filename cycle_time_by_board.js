@@ -1,9 +1,10 @@
 "use strict";
 
-var Trello = require("trello");
 var _ = require("lodash");
 var moment = require("moment");
 var elapsedTime = require("./elapsedTime").elapsedTime;
+var Trello = require("trello");
+var trelloGateway = require("./trelloGateway");
 
 var memberId = "me";
 var trelloId = process.env.TRELLO_ID;
@@ -15,32 +16,11 @@ console.log("TRELLO_TOKEN is " + trelloToken);
 console.log("TRELLO_BOARD is " + boardName);
 
 var trello = new Trello(trelloId, trelloToken);
-var rest = require('restler');
-
-function makeRequest(fn, uri, options) {
-        return new Promise(function(resolve, reject) {
-            fn(uri, options)
-                .once('complete', function (result) {
-                    if (result instanceof Error) {
-                        reject(result);
-                    } else {
-                        resolve(result);
-                    }
-                });
-        });
-}
 
 function findCorrectBoard(boards, boardName) {
     return _.find(boards, function(board) {
         return board.name == boardName;
     });
-}
-
-function getAllCardsForBoard(board) {
-  var query = trello.createQuery();
-  query.actions = "createCard,updateCard:closed,updateCard:idList,deleteCard";
-  query.filter = "all";
-  return makeRequest(rest.get, trello.uri + '/1/boards/' + board.id + '/cards', {query: query});
 }
 
 function lastWorkingAction(actions) {
@@ -61,17 +41,9 @@ function endTimestamp(actions) {
   return card.date;
 }
 
-// function getElapsedTime(startTime, endTime) {
-//   var startDate = moment(startTime);
-//   var endDate = moment(endTime);
-
-//   return endDate.diff(startDate, 'days');
-// }
-
 function getEstimate(card) {
-
   var estimate = 9999;
-  _.each(card.labels, (label) => { 
+  _.each(card.labels, (label) => {
     var regex = /^([0-9])[ ]*-/;
     var result = label.name.match(regex);
     if(result != null) {
@@ -86,12 +58,12 @@ function processCards(cards) {
 
   var errorLog = [];
 
-    console.log("Total cards: " + cards.length);
+  console.log("Total cards: " + cards.length);
 
   console.log("cycle time\testimate\tcard name");
   var histogram = new Object();
 
-    _.each(cards, (card) => { 
+    _.each(cards, (card) => {
         if (lastWorkingAction(card.actions) === undefined || lastCompleteAction(card.actions) === undefined) {
           return;
         }
@@ -119,8 +91,8 @@ function processCards(cards) {
   _.each(errorLog, (error) => { console.error(error); });
 }
 
-trello.getBoards(memberId)
+trelloGateway.getBoards(trello, memberId)
     .then((boards) => { return findCorrectBoard(boards, boardName); })
-    .then((board) => { return getAllCardsForBoard(board); })
+    .then((board) => { return trelloGateway.getAllCardsForBoard(trello, board); })
     .then((cards) => { processCards(cards); })
     .then(null, (error) => { console.log("error:" + error); });
