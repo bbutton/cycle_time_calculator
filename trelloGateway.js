@@ -1,6 +1,7 @@
 "use strict";
 
-var rest = require('restler');
+let rest = require('restler');
+let Trello = require('trello');
 
 function makeRequest(fn, uri, options) {
         return new Promise(function(resolve, reject) {
@@ -15,13 +16,21 @@ function makeRequest(fn, uri, options) {
         });
 }
 
-module.exports.getAllCardsForBoard = function(trello, board) {
-  var query = trello.createQuery();
-  query.actions = "createCard,updateCard:closed,updateCard:idList,deleteCard";
-  query.filter = "all";
-  return makeRequest(rest.get, trello.uri + '/1/boards/' + board.id + '/cards', {query: query});
+class TrelloGateway {
+	constructor(trelloDevKey, trelloToken) {
+		this.trello = new Trello(trelloDevKey, trelloToken);
+	}
+
+	getAllCardsForBoard(board) {
+	  let query = this.trello.createQuery();
+	  query.actions = "createCard,updateCard:closed,updateCard:idList,deleteCard";
+	  query.filter = "all";
+	  return makeRequest(rest.get, this.trello.uri + '/1/boards/' + board.id + '/cards', {query: query});
+	}
+
+	getBoards(memberId) {
+		return this.trello.getBoards(memberId);
+	}
 }
 
-module.exports.getBoards = function(trello, memberId) {
-	return trello.getBoards(memberId);
-}
+module.exports = TrelloGateway;

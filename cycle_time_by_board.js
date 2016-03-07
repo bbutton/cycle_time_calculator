@@ -1,10 +1,9 @@
 "use strict";
 
-var _ = require("lodash");
-var moment = require("moment");
-var elapsedTime = require("./elapsedTime").elapsedTime;
-var Trello = require("trello");
-var trelloGateway = require("./trelloGateway");
+let _ = require("lodash");
+let moment = require("moment");
+let elapsedTime = require("./elapsedTime").elapsedTime;
+let TrelloGateway = require("./trelloGateway");
 
 var memberId = "me";
 var trelloId = process.env.TRELLO_ID;
@@ -15,7 +14,7 @@ console.log("TRELLO_ID is " + trelloId);
 console.log("TRELLO_TOKEN is " + trelloToken);
 console.log("TRELLO_BOARD is " + boardName);
 
-var trello = new Trello(trelloId, trelloToken);
+let trelloGateway = new TrelloGateway(trelloId, trelloToken);
 
 function findCorrectBoard(boards, boardName) {
     return _.find(boards, function(board) {
@@ -91,8 +90,8 @@ function processCards(cards) {
   _.each(errorLog, (error) => { console.error(error); });
 }
 
-trelloGateway.getBoards(trello, memberId)
+trelloGateway.getBoards(memberId)
     .then((boards) => { return findCorrectBoard(boards, boardName); })
-    .then((board) => { return trelloGateway.getAllCardsForBoard(trello, board); })
+    .then((board) => { return trelloGateway.getAllCardsForBoard(board); })
     .then((cards) => { processCards(cards); })
     .then(null, (error) => { console.log("error:" + error); });
