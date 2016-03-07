@@ -4,6 +4,7 @@ let _ = require("lodash");
 let moment = require("moment");
 let elapsedTime = require("./elapsedTime").elapsedTime;
 let TrelloGateway = require("./trelloGateway");
+let TrelloModel = require("./trelloModel");
 
 var memberId = "me";
 var trelloId = process.env.TRELLO_ID;
@@ -15,11 +16,10 @@ console.log("TRELLO_TOKEN is " + trelloToken);
 console.log("TRELLO_BOARD is " + boardName);
 
 let trelloGateway = new TrelloGateway(trelloId, trelloToken);
+let trelloModel = new TrelloModel();
 
 function findCorrectBoard(boards, boardName) {
-    return _.find(boards, function(board) {
-        return board.name == boardName;
-    });
+  return trelloModel.findCorrectBoard(boards, boardName);
 }
 
 function lastWorkingAction(actions) {
