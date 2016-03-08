@@ -3,6 +3,7 @@
 let _ = require("lodash");
 let TrelloGateway = require("./trelloGateway");
 let TrelloModel = require("./trelloModel");
+let CardMetrics = require('./cardMetrics');
 
 var memberId = "me";
 var trelloId = process.env.TRELLO_ID;
@@ -49,25 +50,34 @@ function processCards(cards) {
   console.log("cycle time\testimate\tcard name");
   var histogram = new Object();
 
+  let collectedMetrics = []
+
   _.each(cards, (card) => {
     if (trelloModel.lastWorkingAction(card.actions) === undefined || trelloModel.lastCompleteAction(card.actions) === undefined) {
       return;
     }
-    var cycleTime = trelloModel.elapsedTime(trelloModel.startingTimestamp(card.actions), trelloModel.endTimestamp(card.actions));
-    var estimate = trelloModel.getEstimate(card);
-    if(estimate != 9999) {
-      console.log(cycleTime + "," + estimate + ",\"" + card.name + "\"");
+
+    let cycleTime = trelloModel.elapsedTime(trelloModel.startingTimestamp(card.actions), trelloModel.endTimestamp(card.actions));
+    let estimate = trelloModel.getEstimate(card);
+
+    let cardMetrics = new CardMetrics(card.id, card.name, cycleTime, estimate);
+    collectedMetrics.push(cardMetrics);
+  });
+
+  _.each(collectedMetrics, (cardMetrics) => {
+    if(cardMetrics.getEstimate() != 9999) {
+      console.log(cardMetrics.getCycleTime() + "," + cardMetrics.getEstimate() + ",\"" + cardMetrics.getName() + "\"");
     } else {
-      errorLog.push(cycleTime + " days, estimate: " + estimate + " - \"" + card.name + "\"");
+      errorLog.push(cardMetrics.getCycleTime() + " days, estimate: " + cardMetrics.getEstimate() + " - \"" + cardMetrics.getName() + "\"");
     }
 
-    if (! histogram[estimate])
-    histogram[estimate] = new Array();
+    if (! histogram[cardMetrics.getEstimate()])
+      histogram[cardMetrics.getEstimate()] = new Array();
 
-    if ( histogram[estimate][cycleTime] )
-    histogram[estimate][cycleTime] += 1;
+    if ( histogram[cardMetrics.getEstimate()][cardMetrics.getCycleTime()] )
+      histogram[cardMetrics.getEstimate()][cardMetrics.getCycleTime()] += 1;
     else
-    histogram[estimate][cycleTime] = 1;
+      histogram[cardMetrics.getEstimate()][cardMetrics.getCycleTime()] = 1;
   });
 
   _.each(histogram, (value, key) => {
