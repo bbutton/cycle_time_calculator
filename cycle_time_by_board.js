@@ -64,19 +64,13 @@ function calculateCycleTime(cards) {
   return collectedMetrics;
 }
 
-
-function processCards(cards) {
-
-  let collectedMetrics = calculateCycleTime(cards);
-
-  var errorLog = [];
-
+function displayCycleTimes(cards, collectedMetrics) {
   console.log("Total cards: " + cards.length);
   console.log("Metrics collected for " + collectedMetrics.length + " cards.");
 
   console.log("cycle time\testimate\tcard name");
-  var histogram = new Object();
 
+  var errorLog = [];
   _.each(collectedMetrics, (cardMetrics) => {
     if(cardMetrics.getEstimate() != 9999) {
       console.log(cardMetrics.getCycleTime() + "," + cardMetrics.getEstimate() + ",\"" + cardMetrics.getName() + "\"");
@@ -86,7 +80,14 @@ function processCards(cards) {
   });
 
   _.each(errorLog, (error) => { console.error(error); });
+}
 
+function processCards(cards) {
+
+  let collectedMetrics = calculateCycleTime(cards);
+  displayCycleTimes(cards, collectedMetrics);
+
+  var histogram = new Object();
   _.each(collectedMetrics, (cardMetrics) => {
     if (! histogram[cardMetrics.getEstimate()])
       histogram[cardMetrics.getEstimate()] = new Array();
