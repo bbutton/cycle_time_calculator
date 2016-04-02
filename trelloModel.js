@@ -42,11 +42,11 @@ class TrelloModel {
 
 	  return dayCount;
 	}
-	
+
 	getEstimate(card) {
 	  var estimate = 9999;
 	  _.each(card.labels, (label) => {
-	    var regex = /^([0-9])[ ]*-/;
+	    var regex = /^([0-9])/;
 	    var result = label.name.match(regex);
 	    if(result != null) {
 	      estimate = result[1];
