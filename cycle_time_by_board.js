@@ -1,137 +1,119 @@
 "use strict";
 
-var Trello = require("trello");
-var _ = require("lodash");
-var moment = require("moment");
-var rest = require('restler');
-var elapsedTime = require("./elapsedTime").elapsedTime;
+let _ = require("lodash");
+let TrelloGateway = require("./trelloGateway");
+let TrelloModel = require("./trelloModel");
+let CardMetrics = require('./cardMetrics');
 
 var memberId = "me";
+var trelloId = process.env.TRELLO_ID;
+var trelloToken = process.env.TRELLO_TOKEN;
+//var boardName = process.env.TRELLO_BOARD;
+var boardName = "Feature Team: Platform Security";
 
-console.error("TRELLO_ID is " + process.env.TRELLO_ID);
-console.error("TRELLO_TOKEN is " + process.env.TRELLO_TOKEN);
-console.error("TRELLO_BOARD is " + process.env.TRELLO_BOARD);
-console.error("TRELLO_DAYS_BACK is " + process.env.TRELLO_DAYS_BACK );
+console.log("TRELLO_ID is " + trelloId);
+console.log("TRELLO_TOKEN is " + trelloToken);
+console.log("TRELLO_BOARD is " + boardName);
 
-var trello = new Trello(process.env.TRELLO_ID, process.env.TRELLO_TOKEN);
-
-function makeRequest(fn, uri, options) {
-        return new Promise(function(resolve, reject) {
-            fn(uri, options)
-                .once('complete', function (result) {
-                    if (result instanceof Error) {
-                        reject(result);
-                    } else {
-                        resolve(result);
-                    }
-                });
-        });
-}
+let trelloGateway = new TrelloGateway(trelloId, trelloToken);
+let trelloModel = new TrelloModel();
 
 function findCorrectBoard(boards, boardName) {
-    return _.find(boards, function(board) {
-        return board.name == boardName;
-    });
-}
-
-function getAllCardsForBoard(board) {
-  var query = trello.createQuery();
-  query.actions = "createCard,updateCard:closed,updateCard:idList,deleteCard";
-  query.filter = "all";
-  return makeRequest(rest.get, trello.uri + '/1/boards/' + board.id + '/cards', {query: query});
+  return trelloModel.findCorrectBoard(boards, boardName);
 }
 
 function lastWorkingAction(actions) {
-  return _.findLast(actions, (action) => {return action.data.listAfter && action.data.listAfter.name == 'Working'; });
+  return trelloModel.lastWorkingAction(actions);
 }
 
 function lastCompleteAction(actions) {
-  return _.findLast(actions, (action) => {return action.data.listAfter && action.data.listAfter.name == 'Complete'; });
+  return trelloModel.lastCompleteAction(actions);
 }
 
 function startingTimestamp(actions) {
-  var card = lastWorkingAction(actions);
-  return card.date;
+  return trelloModel.startingTimestamp(actions);
 }
 
 function endTimestamp(actions) {
-  var card = lastCompleteAction(actions);
-  return card.date;
+  return trelloModel.endTimestamp(actions);
 }
 
 function getEstimate(card) {
-
-  var estimate = undefined;
-  _.each(card.labels, (label) => { 
-    var regex = /^([0-9])[ ]*-/;
-    var result = label.name.match(regex);
-    if(result != null) {
-      estimate = result[1];
-    }
-  });
-
-  return estimate;
+  return trelloModel.getEstimate(card);
 }
 
-function processCards(cards, days_back) {
+function calculateCycleTime(cards) {
+  let collectedMetrics = [];
+
+  _.each(cards, (card) => {
+    if (trelloModel.lastWorkingAction(card.actions) === undefined || trelloModel.lastCompleteAction(card.actions) === undefined) {
+      console.log("Skipping " + card.name);
+      return;
+    }
+
+    let startingTimestamp = trelloModel.startingTimestamp(card.actions);
+    let endingTimestamp = trelloModel.endTimestamp(card.actions);
+
+    let cycleTime = trelloModel.elapsedTime(startingTimestamp, endingTimestamp);
+    let estimate = trelloModel.getEstimate(card);
+
+    let cardMetrics = new CardMetrics(card.id, card.name, cycleTime, estimate, startingTimestamp, endingTimestamp);
+    collectedMetrics.push(cardMetrics);
+  });
+
+  return collectedMetrics;
+}
+
+function displayCycleTimes(cards, collectedMetrics) {
+  console.log("Total cards: " + cards.length);
+  console.log("Metrics collected for " + collectedMetrics.length + " cards.");
+
+  console.log("cycle time\testimate\tcard name");
 
   var errorLog = [];
-
-  console.error("Total cards: " + cards.length);
-
-  console.log("\"Cycle Time\",\"Estimate\",\"Card Name\"");
-  var histogram = new Object();
-
-    _.each(cards, (card) => { 
-       if (lastWorkingAction(card.actions) === undefined || lastCompleteAction(card.actions) === undefined) {
-         console.error( "Skipping unfinished card " + card.name + ", " + card.shortUrl );
-         return;
-       }
-       if ( moment().subtract(days_back, 'days').isAfter(startingTimestamp(card.actions) ) ) {
-         console.error( "Skipping old card " + card.name + ", " + card.shortUrl );
-         return;
-       }
-
-       var cycleTime = elapsedTime(startingTimestamp(card.actions), endTimestamp(card.actions));
-       var estimate = getEstimate(card);
-
-       if(estimate != 9999) {
-         console.log(cycleTime + "," + estimate + ",\"" + card.name + "\"");
-       } else {
-         errorLog.push(cycleTime + " days, estimate: " + estimate + " - \"" + card.name + "\"");
-       }
-
-      if (! histogram[estimate]) {
-        histogram[estimate] = new Array();
-        histogram[estimate]["count"] = 0;
-        histogram[estimate]["total"] = 0;
-      }
-
-      if ( histogram[estimate][cycleTime] )
-        histogram[estimate][cycleTime] += 1;
-      else
-        histogram[estimate][cycleTime] = 1;
-
-      histogram[estimate]["total"] += cycleTime;
-      histogram[estimate]["count"] += 1;
-
-    });
-
-    console.log( "\n\"Estimate\",\"Occurences by Day\"" );
-    _.each(histogram, (value, key) => {
-      console.log(key + "," + value);
-    });
-
-    console.log( "\n\"Estimate\",\"Average Days\"" );
-    _.each(histogram, (value, key) => {
-      console.log(key + "," + histogram[key]["total"] / histogram[key]["count"] );
-    });
+  _.each(collectedMetrics, (cardMetrics) => {
+    if(cardMetrics.getEstimate() != 9999) {
+      console.log(cardMetrics.getCycleTime() + "," + cardMetrics.getEstimate() + ",\"" + cardMetrics.getName() + "\"");
+    } else {
+      errorLog.push(cardMetrics.getCycleTime() + " days, estimate: " + cardMetrics.getEstimate() + " - \"" + cardMetrics.getName() + "\"");
+    }
+  });
 
   _.each(errorLog, (error) => { console.error(error); });
 }
 
-trello.getBoards(memberId)
-    .then((boards) => { return findCorrectBoard(boards, process.env.TRELLO_BOARD); })
-    .then((board) => { return getAllCardsForBoard(board); })
-    .then((cards) => { processCards(cards, process.env.TRELLO_DAYS_BACK); })
-    .then(null, (error) => { console.log("error:" + error); });
+function createCycleTimeHistogram(collectedMetrics) {
+  var histogram = new Object();
+  _.each(collectedMetrics, (cardMetrics) => {
+    if (! histogram[cardMetrics.getEstimate()])
+      histogram[cardMetrics.getEstimate()] = new Array();
+
+    if ( histogram[cardMetrics.getEstimate()][cardMetrics.getCycleTime()] )
+      histogram[cardMetrics.getEstimate()][cardMetrics.getCycleTime()] += 1;
+    else
+      histogram[cardMetrics.getEstimate()][cardMetrics.getCycleTime()] = 1;
+  });
+
+  return histogram;
+}
+
+function displayHistogram(histogram) {
+  _.each(histogram, (value, key) => {
+    console.log(key + "," + value);
+  });
+}
+
+function processCards(cards) {
+
+  let collectedMetrics = calculateCycleTime(cards);
+  displayCycleTimes(cards, collectedMetrics);
+
+  var histogram = createCycleTimeHistogram(collectedMetrics);
+  displayHistogram(histogram);
+}
+
+trelloGateway.getBoards(memberId)
+  .then((boards) => { return trelloModel.findCorrectBoard(boards, boardName); })
+  .then((board) => { return trelloGateway.getAllCardsForBoard(board); })
+  .then((cards) => { processCards(cards); })
+  .then(null, (error) => { console.log("error:" + error); });
