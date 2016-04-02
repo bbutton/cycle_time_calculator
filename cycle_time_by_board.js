@@ -82,11 +82,7 @@ function displayCycleTimes(cards, collectedMetrics) {
   _.each(errorLog, (error) => { console.error(error); });
 }
 
-function processCards(cards) {
-
-  let collectedMetrics = calculateCycleTime(cards);
-  displayCycleTimes(cards, collectedMetrics);
-
+function createCycleTimeHistogram(collectedMetrics) {
   var histogram = new Object();
   _.each(collectedMetrics, (cardMetrics) => {
     if (! histogram[cardMetrics.getEstimate()])
@@ -98,9 +94,22 @@ function processCards(cards) {
       histogram[cardMetrics.getEstimate()][cardMetrics.getCycleTime()] = 1;
   });
 
+  return histogram;
+}
+
+function displayHistogram(histogram) {
   _.each(histogram, (value, key) => {
     console.log(key + "," + value);
   });
+}
+
+function processCards(cards) {
+
+  let collectedMetrics = calculateCycleTime(cards);
+  displayCycleTimes(cards, collectedMetrics);
+
+  var histogram = createCycleTimeHistogram(collectedMetrics);
+  displayHistogram(histogram);
 }
 
 trelloGateway.getBoards(memberId)
