@@ -10,8 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.13.3",
+    "kew": "^0.7.0",
     "lodash": "^3.10.1",
     "moment": "^2.11.1",
+    "orchestrate": "^0.8.0",
     "restler": "^3.4.0",
     "trello": "^0.5.0"
   },
