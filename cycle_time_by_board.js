@@ -18,30 +18,6 @@ console.log("TRELLO_BOARD is " + boardName);
 let trelloGateway = new TrelloGateway(trelloId, trelloToken);
 let trelloModel = new TrelloModel();
 
-function findCorrectBoard(boards, boardName) {
-  return trelloModel.findCorrectBoard(boards, boardName);
-}
-
-function lastWorkingAction(actions) {
-  return trelloModel.lastWorkingAction(actions);
-}
-
-function lastCompleteAction(actions) {
-  return trelloModel.lastCompleteAction(actions);
-}
-
-function startingTimestamp(actions) {
-  return trelloModel.startingTimestamp(actions);
-}
-
-function endTimestamp(actions) {
-  return trelloModel.endTimestamp(actions);
-}
-
-function getEstimate(card) {
-  return trelloModel.getEstimate(card);
-}
-
 function calculateCycleTime(cards) {
   let collectedMetrics = [];
 
